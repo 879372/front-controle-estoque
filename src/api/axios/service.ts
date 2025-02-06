@@ -25,9 +25,9 @@ interface AxiosRequestProps {
       });
       return response.data;
     } catch (error: any) {
-      // if(error.response.data.message === 'Token inválido'){
-      //   window.location.href = '/';
-      // };
+      if(error.response.data.message === 'Token inválido' || error.response.data.message === "jwt expired"){
+        window.location.href = '/';
+      };
       console.log(error.response || error);
       throw error.response?.data || error;
     }

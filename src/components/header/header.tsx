@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { useEffect, useState } from 'react';
-// import { useAuth } from '@/context/AuthContext';
 import { CreditCard, Lock, LockIcon, LogOut, User, User2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -8,7 +7,6 @@ import { Label } from "../ui/label";
 import InputMask from 'react-input-mask';
 import { toast } from "react-toastify";
 import { patchUserId, PatchUsersIdRequest } from "@/api/axios/usuarios/patchUserId";
-import { patchPasswordUserId, PatchPasswordUserIdRequest } from "@/api/axios/usuarios/patchPasswordUserId";
 import { ScrollArea } from "../ui/scroll-area";
 import { useAuth } from "@/context/AuthContext";
 
@@ -24,8 +22,8 @@ export default function Header({ titulo, isOpen, toggleSidebar }: HeaderProps) {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
-  const [dataUpdatePassword, setDataUpdatePassword] = useState<PatchPasswordUserIdRequest>({ oldPassword: '', newPassword: '', confirmPassword: '' });
-  const [dataUpdateUser, setDataUpdateUser] = useState<PatchUsersIdRequest>({ username: '' });
+  const [dataUpdatePassword, setDataUpdatePassword] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [dataUpdateUser, setDataUpdateUser] = useState({ username: '' });
   const [modalOpenPassword, setModalOpenPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
@@ -33,10 +31,10 @@ export default function Header({ titulo, isOpen, toggleSidebar }: HeaderProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await patchPasswordUserId(dataUpdatePassword, companyId);
+      // const response = await patchPasswordUserId(dataUpdatePassword, companyId);
       setModalOpenPassword(false);
       toast.success('Senha atualizada com sucesso.');
-      console.log(response)
+      // console.log(response)
       console.log(dataUpdatePassword)
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "message" in error) {
@@ -53,10 +51,10 @@ export default function Header({ titulo, isOpen, toggleSidebar }: HeaderProps) {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await patchUserId(dataUpdateUser, companyId);
+      // const response = await patchUserId(dataUpdateUser, companyId);
       setModalOpen(false);
       toast.success('Usuário atualizado com sucesso.');
-      console.log(response)
+      // console.log(response)
       console.log(dataUpdatePassword)
     } catch (error: unknown) {
       if (typeof error === "object" && error !== null && "message" in error) {

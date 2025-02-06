@@ -1,25 +1,20 @@
 import { makeRequest } from "../service";
 
 export interface CreateUser {
-  username: string;
-  type: string;
+  email: string;
   password: string;
 }
 
 export interface CreateUserResponse {
-  user: {
-    id: string;
-    username: string;
-    type: string;
-    createdAt: string;
-  };
-  access_token: string;
+  id_usuario: string;
+  email: string;
+  password: string;
 }
 
 export const createUser = async (dadosUser: CreateUser): Promise<CreateUserResponse> => {
   try {
     const data = await makeRequest<CreateUserResponse>({
-      url: '/api/users/create',
+      url: '/usuario',
       method: 'POST',
       data: dadosUser,
     });

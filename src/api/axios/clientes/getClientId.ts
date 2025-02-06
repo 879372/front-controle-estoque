@@ -2,17 +2,22 @@ import { makeRequest } from "../service";
 
 
 export interface GetClientIdResponse {
-    id: string;
-    name: string;
-    username: string;
-    additionalStandardGrossWeight: number;
-    createdAt: string;
+    id_cliente: number;
+    nome: string;
+    email: string;
+    telefone: string;
+    endereco: string;
+    bairro: string;
+    cidade: string;
+    estado: string;
+    cep: string;
+    data_cadastro: string;
 }
 
 export const getClientId = async (id: string): Promise<GetClientIdResponse> => {
     try {
         const data = await makeRequest<GetClientIdResponse>({
-            url: `/api/customers/list-id/${id}`,
+            url: `/clientes/${id}`,
             method: 'GET',
         });
         return data;

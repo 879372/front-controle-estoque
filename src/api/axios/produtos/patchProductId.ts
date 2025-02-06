@@ -1,20 +1,17 @@
 import { makeRequest } from "../service";
 
-export interface PatchClientsIdRequest {
+export interface PatchProductIdRequest {
     nome: string;
-    email: string;
-    telefone: string;
-    endereco: string;
-    bairro: string;
-    cidade: string;
-    estado: string;
-    cep: string;
+    descricao: string;
+    preco: number;
+    estoque: number;
+    data_validade: string;
 }
 
-export const patchClientId = async (request: PatchClientsIdRequest, id: string) => {
+export const patchProductId = async (request: PatchProductIdRequest, id: string) => {
     try {
         const data = await makeRequest({
-            url: `/clientes/${id}`,
+            url: `/produto/${id}`,
             method: 'PATCH',
             data: request
         });
