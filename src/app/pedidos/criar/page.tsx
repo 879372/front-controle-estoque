@@ -11,87 +11,92 @@ import Sidebar from '@/components/sidebar/sidebar';
 import Header from '@/components/header/header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
-import { createClient, CreateClient } from '@/api/axios/clientes/createClient';
+import { createProduct, CreateProduct } from '@/api/axios/produtos/createProduct';
+import { patchProductId, PatchProductIdRequest } from '@/api/axios/produtos/patchProductId';
+import { deleteProductId } from '@/api/axios/produtos/deleteProductId';
+import { GetProductParams, GetProductResponse, getProducts } from '@/api/axios/produtos/getProduct';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GetClientParams, GetClientResponse, getClients } from '@/api/axios/clientes/getClient';
-import { patchClientId, PatchClientsIdRequest } from '@/api/axios/clientes/patchClientId';
-import { deleteClientId } from '@/api/axios/clientes/deleteClientId';
 
-export default function Clientes() {
+export default function Produtos() {
     const [isOpen, setIsOpen] = useState(true);
     const [isSmallScreen, setIsSmallScreen] = useState(false);
-    const [filter, setFilter] = useState<GetClientParams>({ limit: 10, page: 1, search: '', startDate: '', endDate: '', status:'' });
+    const [filter, setFilter] = useState<GetProductParams>({ limit: 10, page: 1, search: '', startDate: '', endDate: '', status: '' });
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [modalRegister, setModalRegister] = useState<boolean>(false);
     const [modalDelete, setModalDelete] = useState<boolean>(false);
-    const [dataRegister, setDataRegister] = useState<CreateClient>({ nome: '', email: '', bairro: '', cep: '', cidade: '', endereco: '', estado: '', telefone: ''});
-    const [dataUpdate, setDataUpdate] = useState<PatchClientsIdRequest>({ nome: '', email: '', bairro: '', cep: '', cidade: '', endereco: '', estado: '', telefone: ''});
+    const [dataRegister, setDataRegister] = useState<CreateProduct>({ nome: '', descricao: '', estoque: 0, preco: 0, data_validade: '' });
+    const [dataUpdate, setDataUpdate] = useState<PatchProductIdRequest>({ nome: '', descricao: '', estoque: 0, preco: 0, data_validade: '' });
     const [dataUpdateId, setDataUpdateId] = useState<string>('');
     const [pagination, setPagination] = useState({ totalPages: 0, currentPage: 0 });
+    const [listProducts, setListProducts] = useState<GetProductResponse['produto']>();
     const [listClients, setListClients] = useState<GetClientResponse['clientes']>();
+    const [nameClient, setNameClient] = useState<string>()
+    const [idClient, setIdClient] = useState<string>()
 
     const submitRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await createClient(dataRegister);
+            const response = await createProduct(dataRegister);
             console.log(response)
             console.log(dataRegister)
-            toast.success('Cliente criado com sucesso.');
-            fetchCliets();
+            toast.success('Produto criado com sucesso.');
+            fetchProduct();
             setModalRegister(false);
         } catch (error: unknown) {
             if (typeof error === "object" && error !== null && "message" in error) {
                 toast.error((error as { message: string }).message);
             } else {
-                toast.error("Erro ao criar caixa");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const submitDelete = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const response = await deleteClientId(dataUpdateId);
-            toast.success('Cliente excluido com sucesso.');
-            fetchCliets();
-            setModalDelete(false);
-        } catch (error: unknown) {
-            if (typeof error === "object" && error !== null && "message" in error) {
-                toast.error((error as { message: string }).message);
-            } else {
-                toast.error("Erro ao criar caixa");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    const submitUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const response = await patchClientId(dataUpdate, dataUpdateId);
-            setModalOpen(false);
-            toast.success('Cliente atualizado com sucesso.');
-            fetchCliets();
-        } catch (error: unknown) {
-            if (typeof error === "object" && error !== null && "message" in error) {
-                toast.error((error as { message: string }).message);
-            } else {
-                toast.error("Erro ao atualizar processo");
+                toast.error("Erro ao criar produto");
             }
         } finally {
             setLoading(false);
         }
     };
 
-    const params: GetClientParams = useMemo(() => ({
+    const submitDelete = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const response = await deleteProductId(dataUpdateId);
+            toast.success('Produto excluido com sucesso.');
+            fetchProduct();
+            setModalDelete(false);
+        } catch (error: unknown) {
+            if (typeof error === "object" && error !== null && "message" in error) {
+                toast.error((error as { message: string }).message);
+            } else {
+                toast.error("Erro ao criar produto");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const submitUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const response = await patchProductId(dataUpdate, dataUpdateId);
+            setModalOpen(false);
+            toast.success('Produto atualizado com sucesso.');
+            fetchProduct();
+        } catch (error: unknown) {
+            if (typeof error === "object" && error !== null && "message" in error) {
+                toast.error((error as { message: string }).message);
+            } else {
+                toast.error("Erro ao atualizar produto");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const params: GetProductParams = useMemo(() => ({
         limit: filter.limit,
         page: filter.page,
         endDate: filter.endDate,
@@ -100,11 +105,11 @@ export default function Clientes() {
         status: filter.status
     }), [filter]);
 
-    const fetchCliets = useCallback(async () => {
+    const fetchProduct = useCallback(async () => {
         setIsLoading(true);
         try {
-            const response = await getClients(params);
-            setListClients(response.clientes);
+            const response = await getProducts(params);
+            setListProducts(response.produto);
             setPagination({ totalPages: response.totalPages, currentPage: response.page });
         } catch (error) {
             console.log(error);
@@ -114,14 +119,11 @@ export default function Clientes() {
         }
     }, [params]);
 
-
-    
-
     const handleRegiterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setDataRegister((prevRegister) => ({
             ...prevRegister,
-            [name]: value,
+            [name]: name === 'preco' || name === 'estoque' ? Number(value) : value,
         }));
     };
 
@@ -129,12 +131,12 @@ export default function Clientes() {
         const { name, value } = e.target;
         setDataUpdate((prevRegister) => ({
             ...prevRegister,
-            [name]: value,
+            [name]: name === 'preco' || name === 'estoque' ? Number(value) : value,
         }));
     };
 
     useEffect(() => {
-        fetchCliets();
+        fetchProduct();
     }, [filter.page]);
 
     const checkScreenSize = () => {
@@ -186,106 +188,131 @@ export default function Clientes() {
 
     const handleFiltrar = () => {
         setFilter((prev) => ({ ...prev, page: 1 }));
-        fetchCliets();
+        fetchProduct();
     };
 
     const handleClick = (client: any, id: string) => {
         setDataUpdateId(id);
         setDataUpdate({
             nome: client.nome,
-            email: client.email,
-            bairro: client.bairro,
-            cep: client.cep,
-            cidade:client.cidade,
-            endereco: client.endereco,
-            estado: client.estado,
-            telefone: client.telefone
+            descricao: client.descricao,
+            data_validade: client.data_validade,
+            estoque: client.estoque,
+            preco: client.preco
         })
         setModalOpen(true);
     }
+
+    const fetchClients = useCallback(async () => {
+        let allEmpresas: GetClientResponse['clientes'] = [];
+        let page = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+            const params: GetClientParams = {
+                limit: filter.limit,
+                page: filter.page
+            };
+            try {
+                const data = await getClients(params);
+                allEmpresas = [...allEmpresas, ...data.clientes];
+                if (data.clientes.length < 50) {
+                    hasMore = false;
+                } else {
+                    page += 1;
+                }
+            } catch (error) {
+                console.log(error)
+            }
+        }
+        setListClients(allEmpresas);
+
+    }, [filter]);
+
+    useEffect(() => {
+        fetchClients();
+    }, [])
+
+    const handleValueChange = (id: string) => {
+        const selectedEmp = listClients?.find(emp => String(emp.id_cliente) === id);
+        setIdClient(id)
+        if (selectedEmp) {
+            setNameClient(selectedEmp.nome);
+        }
+
+    };
 
     return (
         <div className="flex h-screen">
             <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
             <div className={`flex-1 transition-margin overflow-y-auto  duration-300 ease-in-out ${isSmallScreen ? 'ml-0' : (isOpen ? 'ml-64' : 'ml-0')}`} style={{ width: isOpen ? 'calc(100% - 256px)' : '100%' }}>
-                <Header titulo="Clientes" isOpen={isOpen} toggleSidebar={toggleSidebar} />
+                <Header titulo="Novo pedido" isOpen={isOpen} toggleSidebar={toggleSidebar} />
                 <div className="flex-col mt-20 sm:mb-0 mb-52">
                     <div className="p-8">
                         {isLoadingInitial === false ? (
-                            <Card className=" rounded-xl p-5 ">
+                            <Card className="h-[80vh] rounded-xl p-5 ">
                                 <div className=''>
                                     <div className='flex justify-center sm:justify-between mb-2 items-end flex-wrap gap-2'>
-                                        <div className='flex items-center gap-2 flex-wrap'>
-                                            <div>
-                                                <Label className='text-xs'>Filtrar nome:</Label>
+                                        <div className='flex items-center gap-2 flex-wrap w-full'>
+                                            <div className='flex items-center gap-2 w-full'>
                                                 <Input
                                                     value={filter.search}
                                                     onChange={(e) => setFilter(prev => ({ ...prev, search: e.target.value }))}
-                                                    className='h-8 w-[140px]'
-                                                    placeholder='Pesquise o nome' />
-                                            </div>
-                                            <div>
-                                                <Label className='text-xs'>Data Início:</Label>
-                                                <Input
-                                                    className='text-xs max-h-8 max-w-[140px]'
-                                                    type="date"
-                                                    value={filter.startDate}
-                                                    onChange={(e) => setFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                                                    className='h-12 w-full semibold'
+                                                    style={{ borderColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA, fontSize: '20px', fontWeight: '400' }}
+                                                    placeholder='Pesquise o produto'
+                                                    required
                                                 />
-                                            </div>
-                                            <div>
-                                                <Label className='text-xs'>Data Fim:</Label>
-                                                <Input
-                                                    className='text-xs max-h-8 max-w-[140px]'
-                                                    type="date"
-                                                    value={filter.endDate}
-                                                    onChange={(e) => setFilter(prev => ({ ...prev, endDate: e.target.value }))}
-                                                />
-                                            </div>
-                                            <div className='self-end'>
-                                                <Button className="max-h-8 max-w-[130px] rounded text-xs"
-                                                    style={{ backgroundColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA }}
+                                                <Select required onValueChange={handleValueChange}>
+                                                    <SelectTrigger className="w-full h-12 text-lg semibold" style={{ borderColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA }}>
+                                                        <SelectValue placeholder={nameClient ?? 'Selecione o cliente'} />
+                                                    </SelectTrigger>
+                                                    <SelectContent className='text-lg semibold'>
+                                                        {listClients?.map((client, index) => (
+                                                            <SelectItem key={index} value={String(client.id_cliente)}>{client.nome}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Button className="h-12 rounded text-lg"
+                                                    style={{ backgroundColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA, height: '100%' }}
                                                     onClick={handleFiltrar}
                                                 >
                                                     {isLoading ? <span className="loading loading-spinner loading-xs"></span>
-                                                        : 'Filtrar'}
+                                                        : 'FINALIZAR'}
                                                 </Button>
                                             </div>
-                                        </div>
-                                        <div className='sm:w-auto w-full'>
-                                            <Button
-                                                className="max-h-8 sm:max-w-[130px] w-full rounded text-xs"
-                                                onClick={() => openModalCloseSidebar()}
-                                                style={{ backgroundColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA }}
-                                            >
-                                                Criar novo cliente
-                                            </Button>
+                                            <div className='self-end'>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div>
-                                        <ScrollArea className="h-full whitespace-nowrap">
+                                    <div className='flex flex-col justify-between gap-5'>
+                                        <ScrollArea className="h-72 whitespace-nowrap">
                                             <Table style={{ maxWidth: 'calc(100% - 32px)' }}>
                                                 <TableHeader>
                                                     <TableRow>
                                                         <TableHead className='p-2'>Nome</TableHead>
-                                                        <TableHead className='p-2'>Email</TableHead>
-                                                        <TableHead className='p-2'>Telefone</TableHead>
-                                                        <TableHead className='p-2'>Criado em</TableHead>
+                                                        <TableHead className='p-2'>Descrição</TableHead>
+                                                        <TableHead className='p-2'>Valor</TableHead>
+                                                        <TableHead className='p-2'>Estoque</TableHead>
+                                                        <TableHead className='p-2'>Validade</TableHead>
+                                                        <TableHead className='p-2'>Criação</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {
-                                                        listClients?.map((client, index) => (
+                                                        listProducts?.map((client, index) => (
                                                             <TableRow key={index} className='text-md'>
                                                                 <TableCell className='p-2'>{client.nome || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.email || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.telefone || '-'}</TableCell>
+                                                                <TableCell className='p-2'>{client.descricao || '-'}</TableCell>
+                                                                <TableCell className='p-2'>{client.preco || '-'}</TableCell>
+                                                                <TableCell className='p-2'>{client.estoque || '-'}</TableCell>
+                                                                <TableCell className='p-2'>{client.data_validade ? new Date(client.data_cadastro).toLocaleString('pt-BR', { timeZone: 'UTC' }) : '-'}</TableCell>
                                                                 <TableCell className='p-2'>{client.data_cadastro ? new Date(client.data_cadastro).toLocaleString('pt-BR', { timeZone: 'UTC' }) : '-'}</TableCell>
                                                                 <TableCell className='flex gap-2 items-center justify-center p-1'>
-                                                                    <button title='Editar' onClick={() => handleClick(client, String(client.id_cliente))} className='bg-transparent'>
+                                                                    <button title='Editar' onClick={() => handleClick(client, String(client.id_produto))} className='bg-transparent'>
                                                                         <Edit size={18} />
                                                                     </button>
-                                                                    <button title='Excluir' onClick={() => {setDataUpdateId(String(client.id_cliente)); setModalDelete(true) }} className='bg-transparent'>
+                                                                    <button title='Excluir' onClick={() => { setDataUpdateId(String(client.id_produto)); setModalDelete(true) }} className='bg-transparent'>
                                                                         <X className='text-red-500' size={20} />
                                                                     </button>
                                                                 </TableCell>
@@ -296,22 +323,21 @@ export default function Clientes() {
                                             </Table>
                                             <ScrollBar orientation="horizontal" />
                                         </ScrollArea>
-                                        <div className="flex justify-between items-center mt-4">
-                                            <div className="flex-1">
-                                                <p className="text-sm text-muted-foreground">Página {pagination.currentPage} de {pagination.totalPages}</p>
+                                        <div className='flex gap-2'>
+                                            <div className='flex relative h-20 tex-2xl font-bold '>
+                                                <div className='flex justify-center items-center  border h-full w-32'>
+                                                    <p className='bg-white absolute -top-3 left-2'>Valor Total</p>
+                                                    <h2 className='text-2xl'>R$ 10,00</h2>
+                                                </div>
                                             </div>
-                                            <div className="flex justify-end gap-3">
-                                                <Pagination className='gap-8'>
-                                                    <button onClick={handlePreviousPage} disabled={filter.page === 1 || isLoading}>
-                                                        <ChevronLeft className='text-slate-500' />
-                                                    </button>
-                                                    <button onClick={handleNextPage} disabled={filter.page >= pagination.totalPages || isLoading}>
-                                                        <ChevronRight className='text-slate-500' />
-                                                    </button>
-                                                </Pagination>
+                                            <div className='flex relative h-20 tex-2xl font-bold '>
+                                                <div className='flex justify-center items-center  border h-full w-32'>
+                                                    <p className='bg-white absolute -top-3 left-2'>Quantidade</p>
+                                                    <h2 className='text-2xl'>67</h2>
+                                                </div>
                                             </div>
-                                        </div>
                                     </div>
+                                        </div>
                                 </div>
                             </Card>
                         ) : (
@@ -340,7 +366,7 @@ export default function Clientes() {
                                                 <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
                                             </div>
                                             <h3 className="text-lg leading-6 font-medium" id="modal-title">
-                                                Cadastrar Cliente
+                                                Cadastrar Produto
                                             </h3>
                                         </div>
                                         <div className="mt-3sm:mt-0">
@@ -360,82 +386,54 @@ export default function Clientes() {
                                                             />
                                                         </div>
                                                         <div className='w-full'>
-                                                            <Label htmlFor='email' >Email</Label>
+                                                            <Label htmlFor='descricao'>Descrição*</Label>
                                                             <Input
                                                                 type="text"
-                                                                id="email"
-                                                                name="email"
+                                                                id="descricao"
+                                                                name="descricao"
                                                                 onChange={handleRegiterChange}
-                                                                placeholder='Digite o email'
+                                                                placeholder='Digite a descrição'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='telefone'>Telefone</Label>
+                                                            <Label htmlFor='preco'>Valor*</Label>
                                                             <Input
                                                                 type="number"
-                                                                id="telefone"
-                                                                name="telefone"
+                                                                id="preco"
+                                                                name="preco"
+                                                                step={"0.1"}
+                                                                required
                                                                 onChange={handleRegiterChange}
-                                                                placeholder='Digite a senha'
+                                                                placeholder='Digite o valor'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='endereco'>Endereço</Label>
+                                                            <Label htmlFor='estoque'>Estoque*</Label>
                                                             <Input
                                                                 type="text"
-                                                                id="endereco"
-                                                                name="endereco"
+                                                                id="estoque"
+                                                                required
+                                                                name="estoque"
                                                                 onChange={handleRegiterChange}
-                                                                placeholder='Digite o endereço'
+                                                                placeholder='Digite o estoque'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='bairro'>Bairro</Label>
+                                                            <Label htmlFor='data_validade'>Validade*</Label>
                                                             <Input
-                                                                type="text"
-                                                                id="bairro"
-                                                                name="bairro"
+                                                                type="date"
+                                                                id="data_validade"
+                                                                name="data_validade"
+                                                                required
                                                                 onChange={handleRegiterChange}
-                                                                placeholder='Digite o bairro'
+                                                                placeholder='Digite a validade'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
-                                                        <div>
-                                                            <Label htmlFor='cidade'>Cidade</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="cidade"
-                                                                name="cidade"
-                                                                onChange={handleRegiterChange}
-                                                                placeholder='Digite a cidade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='estado'>Estado</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="estado"
-                                                                name="estado"
-                                                                onChange={handleRegiterChange}
-                                                                placeholder='Digite a cidade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='cep'>CEP</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="cep"
-                                                                name="cep"
-                                                                onChange={handleRegiterChange}
-                                                                placeholder='Digite a cidade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
+
                                                     </div>
                                                 </div>
                                             </div>
@@ -481,7 +479,7 @@ export default function Clientes() {
                                                 <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
                                             </div>
                                             <h3 className="text-lg leading-6 font-medium" id="modal-title">
-                                                Editar Cliente
+                                                Editar Produto
                                             </h3>
                                         </div>
                                         <div className="mt-3sm:mt-0">
@@ -489,7 +487,7 @@ export default function Clientes() {
                                                 <div >
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <div>
-                                                            <Label htmlFor='nome'>Nome*</Label>
+                                                            <Label htmlFor='nome'>Nome</Label>
                                                             <Input
                                                                 type="text"
                                                                 id="nome"
@@ -502,86 +500,50 @@ export default function Clientes() {
                                                             />
                                                         </div>
                                                         <div className='w-full'>
-                                                            <Label htmlFor='email' >Email</Label>
+                                                            <Label htmlFor='descricao'>Descrição</Label>
                                                             <Input
                                                                 type="text"
-                                                                id="email"
-                                                                name="email"
-                                                                value={dataUpdate.email}
+                                                                id="descricao"
+                                                                name="descricao"
+                                                                value={dataUpdate.descricao}
                                                                 onChange={handleChange}
-                                                                placeholder='Digite o email'
+                                                                placeholder='Digite a descrição'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='telefone'>Telefone</Label>
+                                                            <Label htmlFor='preco'>Valor</Label>
                                                             <Input
                                                                 type="number"
-                                                                id="telefone"
-                                                                name="telefone"
-                                                                value={dataUpdate.telefone}
+                                                                id="preco"
+                                                                name="preco"
+                                                                value={dataUpdate.preco}
                                                                 onChange={handleChange}
-                                                                placeholder='Digite a senha'
+                                                                placeholder='Digite o valor'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='endereco'>Endereço</Label>
+                                                            <Label htmlFor='estoque'>Estoque</Label>
                                                             <Input
                                                                 type="text"
-                                                                id="endereco"
-                                                                name="endereco"
-                                                                value={dataUpdate.endereco}
+                                                                id="estoque"
+                                                                name="estoque"
+                                                                value={dataUpdate.estoque}
                                                                 onChange={handleChange}
-                                                                placeholder='Digite o endereço'
+                                                                placeholder='Digite o estoque'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
                                                         <div>
-                                                            <Label htmlFor='bairro'>Bairro</Label>
+                                                            <Label htmlFor='data_validade'>Validade</Label>
                                                             <Input
-                                                                type="text"
-                                                                id="bairro"
-                                                                name="bairro"
-                                                                value={dataUpdate.bairro}
+                                                                type="date"
+                                                                id="data_validade"
+                                                                name="data_validade"
+                                                                value={dataUpdate.data_validade}
                                                                 onChange={handleChange}
-                                                                placeholder='Digite o bairro'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='cidade'>Cidade</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="cidade"
-                                                                name="cidade"
-                                                                value={dataUpdate.cidade}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite a cidade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='estado'>Estado</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="estado"
-                                                                name="estado"
-                                                                value={dataUpdate.estado}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite a cidade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='cep'>CEP</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="cep"
-                                                                name="cep"
-                                                                value={dataUpdate.cep}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite a cidade'
+                                                                placeholder='Digite a validade'
                                                                 style={{ fontSize: '16px' }}
                                                             />
                                                         </div>
@@ -630,13 +592,13 @@ export default function Clientes() {
                                                 <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
                                             </div>
                                             <h3 className="text-lg leading-6 font-medium" id="modal-title">
-                                                Excluir Cliente
+                                                Excluir produto
                                             </h3>
                                         </div>
                                         <div className="mt-3sm:mt-0">
                                             <div className="mt-5">
                                                 <div >
-                                                    <h1>Tem certeza que deseja excuir esse cliente?</h1>
+                                                    <h1>Tem certeza que deseja excuir esse produto?</h1>
                                                 </div>
                                             </div>
                                         </div>
@@ -665,6 +627,6 @@ export default function Clientes() {
                     </div>
                 </div>
             )}
-       </div>
+        </div>
     );
 }
