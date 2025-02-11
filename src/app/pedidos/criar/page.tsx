@@ -17,6 +17,7 @@ import { deleteProductId } from '@/api/axios/produtos/deleteProductId';
 import { GetProductParams, GetProductResponse, getProducts } from '@/api/axios/produtos/getProduct';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GetClientParams, GetClientResponse, getClients } from '@/api/axios/clientes/getClient';
+import { CreateRequest, createRequest } from '@/api/axios/pedidos/createRequest';
 
 export default function Produtos() {
     const [isOpen, setIsOpen] = useState(true);
@@ -28,12 +29,13 @@ export default function Produtos() {
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [modalRegister, setModalRegister] = useState<boolean>(false);
     const [modalDelete, setModalDelete] = useState<boolean>(false);
-    const [dataRegister, setDataRegister] = useState<CreateProduct>({ nome: '', descricao: '', estoque: 0, preco: 0, data_validade: '' });
+    const [dataRegister, setDataRegister] = useState<CreateRequest>({ clienteId: 0, itensPedido: [], status: 'PENDENTE' });
     const [dataUpdate, setDataUpdate] = useState<PatchProductIdRequest>({ nome: '', descricao: '', estoque: 0, preco: 0, data_validade: '' });
     const [dataUpdateId, setDataUpdateId] = useState<string>('');
     const [pagination, setPagination] = useState({ totalPages: 0, currentPage: 0 });
-    const [listProducts, setListProducts] = useState<GetProductResponse['produto']>();
-    const [listClients, setListClients] = useState<GetClientResponse['clientes']>();
+    const [listProducts, setListProducts] = useState<GetProductResponse['produto']>([]);
+    const [listProductsAdd, setListProductsAdd] = useState<GetProductResponse['produto']>([]);
+    const [listClients, setListClients] = useState<GetClientResponse['clientes']>([]);
     const [nameClient, setNameClient] = useState<string>()
     const [idClient, setIdClient] = useState<string>()
 
@@ -41,11 +43,10 @@ export default function Produtos() {
         e.preventDefault();
         setLoading(true);
         try {
-            const response = await createProduct(dataRegister);
+            const response = await createRequest({ ...dataRegister, clienteId: Number(idClient) });
             console.log(response)
             console.log(dataRegister)
-            toast.success('Produto criado com sucesso.');
-            fetchProduct();
+            toast.success('Pedido criado com sucesso.');
             setModalRegister(false);
         } catch (error: unknown) {
             if (typeof error === "object" && error !== null && "message" in error) {
@@ -115,7 +116,6 @@ export default function Produtos() {
             console.log(error);
         } finally {
             setIsLoading(false);
-            setIsLoadingInitial(false);
         }
     }, [params]);
 
@@ -135,10 +135,6 @@ export default function Produtos() {
         }));
     };
 
-    useEffect(() => {
-        fetchProduct();
-    }, [filter.page]);
-
     const checkScreenSize = () => {
         setIsSmallScreen(window.innerWidth <= 768);
     };
@@ -148,6 +144,7 @@ export default function Produtos() {
         setIsOpen(shouldShowSidebar);
 
     }
+
     useEffect(() => {
         checkScreenSize();
         handleSidebarVisibility();
@@ -223,6 +220,8 @@ export default function Produtos() {
                 }
             } catch (error) {
                 console.log(error)
+            } finally {
+                setIsLoadingInitial(false);
             }
         }
         setListClients(allEmpresas);
@@ -239,9 +238,33 @@ export default function Produtos() {
         if (selectedEmp) {
             setNameClient(selectedEmp.nome);
         }
-
     };
 
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const searchTerm = e.target.value;
+        setFilter(prev => ({ ...prev, search: searchTerm }));
+        fetchProduct();
+        console.log(searchTerm)
+        if (searchTerm === '') {
+            setListProducts([])
+        }
+    };
+
+    const handleClickAdd = async (produto: GetProductResponse['produto'][0]) => {
+        setListProductsAdd((prev) => [
+            ...prev, 
+            {
+                id_produto: produto.id_produto,
+                nome: produto.nome,
+                descricao: produto.descricao,
+                preco: produto.preco,
+                estoque: produto.estoque,
+                data_cadastro: produto.data_cadastro,
+                data_validade: produto.data_validade,
+            }
+        ]);
+    };
+    
     return (
         <div className="flex h-screen">
             <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
@@ -254,15 +277,50 @@ export default function Produtos() {
                                 <div className=''>
                                     <div className='flex justify-center sm:justify-between mb-2 items-end flex-wrap gap-2'>
                                         <div className='flex items-center gap-2 flex-wrap w-full'>
-                                            <div className='flex items-center gap-2 w-full'>
+                                            <div className='flex items-center gap-2 w-full relative'>
                                                 <Input
                                                     value={filter.search}
-                                                    onChange={(e) => setFilter(prev => ({ ...prev, search: e.target.value }))}
+                                                    onChange={handleSearchChange}
                                                     className='h-12 w-full semibold'
                                                     style={{ borderColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA, fontSize: '20px', fontWeight: '400' }}
                                                     placeholder='Pesquise o produto'
                                                     required
                                                 />
+                                                {filter.search &&  (
+                                                    <div className="absolute z-50 w-full bg-slate-200 shadow-lg border mt-1 rounded-lg max-h-60 overflow-auto top-12">
+                                                        {isLoading ? (
+                                                            <p className="p-2 text-gray-500">Pesquisando...</p>
+                                                        ) : listProducts.length > 0 ? (
+                                                            listProducts.map((product) => (
+                                                                <div
+                                                                    onClick={() => {
+                                                                        setDataRegister((prev) => ({
+                                                                            ...prev,
+                                                                            itensPedido: [
+                                                                                ...prev.itensPedido,
+                                                                                {
+                                                                                    produtoId: product.id_produto,
+                                                                                    quantidade: "1", 
+                                                                                },                                                                            ],
+                                                                        }));
+                                                                        setFilter((prev) =>({
+                                                                            ...prev,
+                                                                            search: ''
+                                                                        }));
+                                                                        handleClickAdd(product)
+                                                                    }}
+                                                                    key={product.id_produto}
+                                                                    className="p-3 border-b last:border-none cursor-pointer hover:bg-gray-100 w-full bg-slate-200"
+                                                                >
+                                                                    {product.nome}
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <p className="p-2 text-gray-500">Nenhum produto encontrado.</p>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 <Select required onValueChange={handleValueChange}>
                                                     <SelectTrigger className="w-full h-12 text-lg semibold" style={{ borderColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA }}>
                                                         <SelectValue placeholder={nameClient ?? 'Selecione o cliente'} />
@@ -275,7 +333,7 @@ export default function Produtos() {
                                                 </Select>
                                                 <Button className="h-12 rounded text-lg"
                                                     style={{ backgroundColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA, height: '100%' }}
-                                                    onClick={handleFiltrar}
+                                                    onClick={submitRegister}
                                                 >
                                                     {isLoading ? <span className="loading loading-spinner loading-xs"></span>
                                                         : 'FINALIZAR'}
@@ -300,7 +358,7 @@ export default function Produtos() {
                                                 </TableHeader>
                                                 <TableBody>
                                                     {
-                                                        listProducts?.map((client, index) => (
+                                                        listProductsAdd?.map((client, index) => (
                                                             <TableRow key={index} className='text-md'>
                                                                 <TableCell className='p-2'>{client.nome || '-'}</TableCell>
                                                                 <TableCell className='p-2'>{client.descricao || '-'}</TableCell>
@@ -336,8 +394,8 @@ export default function Produtos() {
                                                     <h2 className='text-2xl'>67</h2>
                                                 </div>
                                             </div>
-                                    </div>
                                         </div>
+                                    </div>
                                 </div>
                             </Card>
                         ) : (

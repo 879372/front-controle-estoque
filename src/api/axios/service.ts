@@ -28,7 +28,7 @@ interface AxiosRequestProps {
       if(error.response.data.message === 'Token inválido' || error.response.data.message === "jwt expired"){
         window.location.href = '/';
       };
-      console.log(error.response || error);
+      console.log(error);
       throw error.response?.data || error;
     }
   }
