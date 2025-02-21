@@ -5,7 +5,7 @@ export interface CreateRequest {
   status: string;
   itensPedido: {
     produtoId: number;
-    quantidade: string;
+    quantidade: number;
   }[];
 }
 

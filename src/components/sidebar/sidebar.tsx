@@ -2,10 +2,8 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-
 import Link from "next/link";
 import { ArrowBigLeft, ArrowBigRight, Box, Boxes, Building, DollarSign, Droplets, Fish, FishOffIcon, FishSymbolIcon, HomeIcon, LayoutDashboard, LayoutList, Leaf, LineChart, LucideQrCode, Menu, Settings, User, Users, Waves, XIcon } from "lucide-react";
-// import { useAuth } from "@/context/AuthContext";
 import {
   Accordion,
   AccordionContent,
@@ -23,9 +21,6 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const [isMobile, setIsMobile] = useState(false);
-
-  // const { setToken } = useAuth()
-
   const router = useRouter();
   const pathname = usePathname();
 
@@ -50,10 +45,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
       window.removeEventListener("resize", handleResize);
     };
   }, [isOpen, toggleSidebar]);
-
-  // const handleLogout = () => {
-  //   setToken('');
-  // };
 
   const isActivePage = (href: string) => {
     return pathname === href;
