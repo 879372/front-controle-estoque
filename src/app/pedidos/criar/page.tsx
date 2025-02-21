@@ -11,7 +11,6 @@ import Sidebar from '@/components/sidebar/sidebar';
 import Header from '@/components/header/header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/ui/pagination';
-import { createProduct, CreateProduct } from '@/api/axios/produtos/createProduct';
 import { patchProductId, PatchProductIdRequest } from '@/api/axios/produtos/patchProductId';
 import { deleteProductId } from '@/api/axios/produtos/deleteProductId';
 import { GetProductParams, GetProductResponse, getProducts } from '@/api/axios/produtos/getProduct';
@@ -19,9 +18,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GetClientParams, GetClientResponse, getClients } from '@/api/axios/clientes/getClient';
 import { CreateRequest, createRequest } from '@/api/axios/pedidos/createRequest';
 
-export default function Produtos() {
-    const [isOpen, setIsOpen] = useState(true);
-    const [isSmallScreen, setIsSmallScreen] = useState(false);
+interface AddProduct {
+    produtos: {
+        id_produto: number;
+        nome: string;
+        descricao: string;
+        preco: number;
+        estoque: number;
+        quantidade: number;
+        data_cadastro: string;
+        data_validade: string;
+    }[]
+}
+
+export default function CriarPedidos() {
+    const [isOpen, setIsOpen] = useState<boolean>(false);
+    const [isSmallScreen, setIsSmallScreen] = useState<boolean>(false);
     const [filter, setFilter] = useState<GetProductParams>({ limit: 10, page: 1, search: '', startDate: '', endDate: '', status: '' });
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
@@ -34,9 +46,10 @@ export default function Produtos() {
     const [dataUpdateId, setDataUpdateId] = useState<string>('');
     const [pagination, setPagination] = useState({ totalPages: 0, currentPage: 0 });
     const [listProducts, setListProducts] = useState<GetProductResponse['produto']>([]);
-    const [listProductsAdd, setListProductsAdd] = useState<GetProductResponse['produto']>([]);
+    const [listProductsAdd, setListProductsAdd] = useState<AddProduct['produtos']>([]);
     const [listClients, setListClients] = useState<GetClientResponse['clientes']>([]);
     const [nameClient, setNameClient] = useState<string>()
+    const [selectedIndex, setSelectedIndex] = useState<number>(-1);
     const [idClient, setIdClient] = useState<string>()
 
     const submitRegister = async (e: React.FormEvent) => {
@@ -250,9 +263,27 @@ export default function Produtos() {
         }
     };
 
-    const handleClickAdd = async (produto: GetProductResponse['produto'][0]) => {
+    const handleQuantityChange = (id_produto: number, change: number) => {
+        setListProductsAdd((prev) =>
+            prev.map((product) => {
+                if (product.id_produto === id_produto) {
+                    const newQuantity = Math.max(1, Math.min(product.quantidade + change, product.estoque));
+                    return {
+                        ...product,
+                        quantidade: newQuantity,
+                        // estoque: product.estoque - (newQuantity - product.quantidade), // Deduz estoque 
+                    };
+                }
+                return product;
+            })
+        );
+    };
+
+    console.log(listProductsAdd)
+
+    const handleClickAdd = async (produto: any) => {
         setListProductsAdd((prev) => [
-            ...prev, 
+            ...prev,
             {
                 id_produto: produto.id_produto,
                 nome: produto.nome,
@@ -261,10 +292,43 @@ export default function Produtos() {
                 estoque: produto.estoque,
                 data_cadastro: produto.data_cadastro,
                 data_validade: produto.data_validade,
+                quantidade: 1
             }
         ]);
     };
-    
+
+
+    const handleKeyDown = (e: any) => {
+        if (!filter.search || listProducts.length === 0) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev + 1) % listProducts.length);
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSelectedIndex((prev) => (prev - 1 + listProducts.length) % listProducts.length);
+        } else if (e.key === "Enter" && selectedIndex !== -1) {
+            e.preventDefault();
+            handleClickAdd(listProducts[selectedIndex]);
+            setFilter((prev) => ({
+                ...prev,
+                search: ''
+            }));
+        }
+    };
+
+    useEffect(() => {
+        document.getElementById("searchInput")?.addEventListener("keydown", handleKeyDown);
+        return () => {
+            document.getElementById("searchInput")?.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [listProducts, selectedIndex]);
+
+    const handleRemoveProduct = (id_produto: number) => {
+        setListProductsAdd((prev) => prev.filter(product => product.id_produto !== id_produto));
+        setModalDelete(false);
+    };
+
     return (
         <div className="flex h-screen">
             <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
@@ -279,6 +343,7 @@ export default function Produtos() {
                                         <div className='flex items-center gap-2 flex-wrap w-full'>
                                             <div className='flex items-center gap-2 w-full relative'>
                                                 <Input
+                                                    id="searchInput"
                                                     value={filter.search}
                                                     onChange={handleSearchChange}
                                                     className='h-12 w-full semibold'
@@ -286,31 +351,33 @@ export default function Produtos() {
                                                     placeholder='Pesquise o produto'
                                                     required
                                                 />
-                                                {filter.search &&  (
+                                                {filter.search && (
                                                     <div className="absolute z-50 w-full bg-slate-200 shadow-lg border mt-1 rounded-lg max-h-60 overflow-auto top-12">
                                                         {isLoading ? (
                                                             <p className="p-2 text-gray-500">Pesquisando...</p>
                                                         ) : listProducts.length > 0 ? (
-                                                            listProducts.map((product) => (
+                                                            listProducts.map((product, index) => (
                                                                 <div
+                                                                    key={product.id_produto}
+                                                                    tabIndex={0}
                                                                     onClick={() => {
-                                                                        setDataRegister((prev) => ({
-                                                                            ...prev,
-                                                                            itensPedido: [
-                                                                                ...prev.itensPedido,
-                                                                                {
-                                                                                    produtoId: product.id_produto,
-                                                                                    quantidade: "1", 
-                                                                                },                                                                            ],
-                                                                        }));
-                                                                        setFilter((prev) =>({
+                                                                        // setDataRegister((prev) => ({
+                                                                        //     ...prev,
+                                                                        //     itensPedido: [
+                                                                        //         ...prev.itensPedido,
+                                                                        //         {
+                                                                        //             produtoId: product.id_produto,
+                                                                        //             quantidade: "1", 
+                                                                        //         },                                                                            ],
+                                                                        // }));
+                                                                        setFilter((prev) => ({
                                                                             ...prev,
                                                                             search: ''
                                                                         }));
-                                                                        handleClickAdd(product)
+                                                                        handleClickAdd(product);
                                                                     }}
-                                                                    key={product.id_produto}
-                                                                    className="p-3 border-b last:border-none cursor-pointer hover:bg-gray-100 w-full bg-slate-200"
+                                                                    className={`p-3 border-b last:border-none cursor-pointer hover:bg-gray-100 w-full bg-slate-200 ${selectedIndex === index ? "bg-gray-300" : ""
+                                                                        }`}
                                                                 >
                                                                     {product.nome}
                                                                 </div>
@@ -320,7 +387,6 @@ export default function Produtos() {
                                                         )}
                                                     </div>
                                                 )}
-
                                                 <Select required onValueChange={handleValueChange}>
                                                     <SelectTrigger className="w-full h-12 text-lg semibold" style={{ borderColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA }}>
                                                         <SelectValue placeholder={nameClient ?? 'Selecione o cliente'} />
@@ -339,46 +405,57 @@ export default function Produtos() {
                                                         : 'FINALIZAR'}
                                                 </Button>
                                             </div>
-                                            <div className='self-end'>
-                                            </div>
                                         </div>
                                     </div>
                                     <div className='flex flex-col justify-between gap-5'>
                                         <ScrollArea className="h-72 whitespace-nowrap">
-                                            <Table style={{ maxWidth: 'calc(100% - 32px)' }}>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead className='p-2'>Nome</TableHead>
-                                                        <TableHead className='p-2'>Descrição</TableHead>
-                                                        <TableHead className='p-2'>Valor</TableHead>
-                                                        <TableHead className='p-2'>Estoque</TableHead>
-                                                        <TableHead className='p-2'>Validade</TableHead>
-                                                        <TableHead className='p-2'>Criação</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
+                                            <table>
+                                                <thead className='bg-white sticky top-0 z-10 whitespace-nowrap'>
+                                                    <tr className='text-sm'>
+                                                        <th className="p-2 font-medium text-start">Nome</th>
+                                                        <th className="p-2 font-medium text-start">Descrição</th>
+                                                        <th className="p-2 font-medium text-start">Valor</th>
+                                                        <th className="p-2 font-medium text-start">Estoque</th>
+                                                        <th className="p-2 font-medium text-start">Validade</th>
+                                                        <th className="p-2 font-medium text-start">Quantidade</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
                                                     {
                                                         listProductsAdd?.map((client, index) => (
-                                                            <TableRow key={index} className='text-md'>
-                                                                <TableCell className='p-2'>{client.nome || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.descricao || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.preco || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.estoque || '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.data_validade ? new Date(client.data_cadastro).toLocaleString('pt-BR', { timeZone: 'UTC' }) : '-'}</TableCell>
-                                                                <TableCell className='p-2'>{client.data_cadastro ? new Date(client.data_cadastro).toLocaleString('pt-BR', { timeZone: 'UTC' }) : '-'}</TableCell>
-                                                                <TableCell className='flex gap-2 items-center justify-center p-1'>
-                                                                    <button title='Editar' onClick={() => handleClick(client, String(client.id_produto))} className='bg-transparent'>
-                                                                        <Edit size={18} />
+                                                            <tr key={index} className='odd:bg-gray-50 even:bg-white text-sm'>
+                                                                <td className='border-t p-2 text-gray-700'>{client.nome || '-'}</td>
+                                                                <td className='border-t p-2 text-gray-700'>{client.descricao || '-'}</td>
+                                                                <td className='border-t p-2 text-gray-700'>{client.preco || '-'}</td>
+                                                                <td className='border-t p-2 text-gray-700'>{client.estoque || '-'}</td>
+                                                                <td className='border-t p-2 text-gray-700'>{client.data_validade ? new Date(client.data_cadastro).toLocaleString('pt-BR', { timeZone: 'UTC' }) : '-'}</td>
+                                                                <td className="p-2 flex items-center gap-2">
+                                                                    <button
+                                                                        className="bg-gray-200 px-2 py-1 rounded"
+                                                                        onClick={() => handleQuantityChange(client.id_produto, -1)}
+                                                                        disabled={client.quantidade <= 1}
+                                                                    >
+                                                                        -
                                                                     </button>
+                                                                    <span className="w-10 text-center">{client.quantidade}</span>
+                                                                    <button
+                                                                        className="bg-gray-200 px-2 py-1 rounded"
+                                                                        onClick={() => handleQuantityChange(client.id_produto, 1)}
+                                                                        disabled={client.quantidade >= client.estoque}
+                                                                    >
+                                                                        +
+                                                                    </button>
+                                                                </td>
+                                                                <td className='flex gap-2 items-center justify-center p-1'>
                                                                     <button title='Excluir' onClick={() => { setDataUpdateId(String(client.id_produto)); setModalDelete(true) }} className='bg-transparent'>
                                                                         <X className='text-red-500' size={20} />
                                                                     </button>
-                                                                </TableCell>
-                                                            </TableRow>
+                                                                </td>
+                                                            </tr>
                                                         ))
                                                     }
-                                                </TableBody>
-                                            </Table>
+                                                </tbody>
+                                            </table>
                                             <ScrollBar orientation="horizontal" />
                                         </ScrollArea>
                                         <div className='flex gap-2'>
@@ -641,7 +718,7 @@ export default function Produtos() {
                             <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
                         </div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <form onSubmit={submitDelete} className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-lg w-full">
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-lg w-full">
                             <ScrollArea>
                                 <div className="bg-white px-4 pt-5 pb-4 ">
                                     <div className="">
@@ -656,7 +733,7 @@ export default function Produtos() {
                                         <div className="mt-3sm:mt-0">
                                             <div className="mt-5">
                                                 <div >
-                                                    <h1>Tem certeza que deseja excuir esse produto?</h1>
+                                                    <h1>Tem certeza que deseja excluir esse produto do pedido?</h1>
                                                 </div>
                                             </div>
                                         </div>
@@ -668,7 +745,7 @@ export default function Produtos() {
                                     style={{
                                         backgroundColor: 'red'
                                     }}
-                                    type='submit'
+                                    onClick={() => handleRemoveProduct(Number(dataUpdateId))}
                                 >
                                     {loading ? <span className="loading loading-spinner loading-xs"></span>
                                         : 'Confirma'}
@@ -681,7 +758,7 @@ export default function Produtos() {
                                     Cancelar
                                 </Button>
                             </div>
-                        </form>
+                        </div>
                     </div>
                 </div>
             )}
