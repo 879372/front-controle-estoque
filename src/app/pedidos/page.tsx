@@ -17,8 +17,23 @@ import { deleteRequestId } from '@/api/axios/pedidos/deleteRequestId';
 import { getRequest, GetRequestParams, GetRequestResponse } from '@/api/axios/pedidos/getRequest';
 import { GetProductParams } from '@/api/axios/produtos/getProduct';
 import Link from 'next/link';
+import { GetRequestIdResponse } from '@/api/axios/pedidos/getRequestId';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export default function Produtos() {
+const formatCurrencyBRL = (value: number | string): string => {
+    if (value === null || value === undefined) return '-';
+    const numberValue = typeof value === 'string' ? parseFloat(value) : value;
+    if (isNaN(numberValue)) return '-';
+
+    return numberValue.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
+
+export default function Pedidos() {
     const [isOpen, setIsOpen] = useState(true);
     const [isSmallScreen, setIsSmallScreen] = useState(false);
     const [filter, setFilter] = useState<GetProductParams>({ limit: 10, page: 1, search: '', startDate: '', endDate: '', status: '' });
@@ -26,34 +41,15 @@ export default function Produtos() {
     const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
     const [loading, setLoading] = useState<boolean>(false);
     const [modalOpen, setModalOpen] = useState<boolean>(false);
+    const [modalCancel, setModalCancel] = useState<boolean>(false);
     const [modalRegister, setModalRegister] = useState<boolean>(false);
     const [modalDelete, setModalDelete] = useState<boolean>(false);
     const [dataRegister, setDataRegister] = useState<CreateRequest>({ clienteId: 0, itensPedido: [], status: 'PENDENTE' });
-    const [dataUpdate, setDataUpdate] = useState<PatchRequestIdRequest>({ status: '' });
+    const [dataUpdate, setDataUpdate] = useState<PatchRequestIdRequest>({ status: 'CANCELADO' });
     const [dataUpdateId, setDataUpdateId] = useState<string>('');
     const [pagination, setPagination] = useState({ totalPages: 0, currentPage: 0 });
     const [listRequest, setListRequest] = useState<GetRequestResponse['pedidos']>();
-
-    const submitRegister = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const response = await createRequest(dataRegister);
-            console.log(response)
-            console.log(dataRegister)
-            toast.success('Pedido realizado com sucesso.');
-            fetchProduct();
-            setModalRegister(false);
-        } catch (error: unknown) {
-            if (typeof error === "object" && error !== null && "message" in error) {
-                toast.error((error as { message: string }).message);
-            } else {
-                toast.error("Erro ao criar pedido");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    const [requestInfo, setRequestInfo] = useState<GetRequestIdResponse>();
 
     const submitDelete = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,8 +75,8 @@ export default function Produtos() {
         setLoading(true);
         try {
             const response = await patchRequestId(dataUpdate, dataUpdateId);
-            setModalOpen(false);
-            toast.success('Pedido confirmado com sucesso.');
+            setModalCancel(false);
+            toast.success('Pedido cancelado com sucesso.');
             fetchProduct();
         } catch (error: unknown) {
             if (typeof error === "object" && error !== null && "message" in error) {
@@ -106,6 +102,7 @@ export default function Produtos() {
         setIsLoading(true);
         try {
             const response = await getRequest(params);
+            console.log(response)
             setListRequest(response.pedidos);
             setPagination({ totalPages: response.totalPages, currentPage: response.page });
         } catch (error) {
@@ -115,22 +112,6 @@ export default function Produtos() {
             setIsLoadingInitial(false);
         }
     }, [params]);
-
-    const handleRegiterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setDataRegister((prevRegister) => ({
-            ...prevRegister,
-            [name]: name === 'preco' || name === 'estoque' ? Number(value) : value,
-        }));
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setDataUpdate((prevRegister) => ({
-            ...prevRegister,
-            [name]: name === 'preco' || name === 'estoque' ? Number(value) : value,
-        }));
-    };
 
     useEffect(() => {
         fetchProduct();
@@ -193,6 +174,7 @@ export default function Produtos() {
         setDataUpdate({
             status: client.status,
         })
+        setRequestInfo(client);
         setModalOpen(true);
     }
 
@@ -319,14 +301,14 @@ export default function Produtos() {
                     </div>
                 </div>
             </div>
-            {/* {modalOpen && (
+            {modalOpen && (
                 <div className="fixed z-50 inset-0 overflow-y-auto">
                     <div className="flex items-center justify-center sm:items-start sm:justify-center min-h-screen px-4 pt-6 pb-20 text-center sm:block sm:p-0">
                         <div className="fixed inset-0 transition-opacity" aria-hidden="true">
                             <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
                         </div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                        <form onSubmit={submitUpdate} className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-3xl w-full">
+                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-3xl w-full">
                             <ScrollArea>
                                 <div className="bg-white px-4 pt-5 pb-4 ">
                                     <div className="">
@@ -335,75 +317,106 @@ export default function Produtos() {
                                                 <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
                                             </div>
                                             <h3 className="text-lg leading-6 font-medium" id="modal-title">
-                                                Editar Pedido
+                                                Pedido {requestInfo?.cliente.nome}
+                                            </h3>
+                                        </div>
+                                        <div className="mt-3sm:mt-0">
+                                            <div className="mt-5">
+                                                <ScrollArea className="h-72 whitespace-nowrap w-full">
+                                                    <table className='w-full'>
+                                                        <thead className='bg-white sticky top-0 z-10 whitespace-nowrap'>
+                                                            <tr className='text-sm'>
+                                                                <th className="p-2 font-medium text-start">Código</th>
+                                                                <th className="p-2 font-medium text-start">Nome</th>
+                                                                <th className="p-2 font-medium text-start">Valor</th>
+                                                                <th className="p-2 font-medium text-start">Quantidade</th>
+                                                                <th className="p-2 font-medium text-start">Valor Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {
+                                                                requestInfo?.itensPedido.map((client, index) => (
+                                                                    <tr key={index} className='odd:bg-gray-50 even:bg-white text-sm'>
+                                                                        <td className='border-t p-2 text-gray-700'>{client.produto.id_produto || '-'}</td>
+                                                                        <td className='border-t p-2 text-gray-700'>{client.produto.descricao || '-'}</td>
+                                                                        <td className='border-t p-2 text-gray-700'>{formatCurrencyBRL(client.preco_unitario) || '-'}</td>
+                                                                        <td className='border-t p-2 text-gray-700'>{client.quantidade || '-'}</td>
+                                                                        <td className='border-t p-2 text-gray-700'>{Number(client.preco_unitario) * Number(client.quantidade) || '-'}</td>
+
+                                                                    </tr>
+                                                                ))
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                    <ScrollBar orientation="horizontal" />
+                                                </ScrollArea>
+                                                <div className='flex gap-2 items-center'>
+                                                    <div className='flex relative h-10 tex-sm font-semibold '>
+                                                        <div className='flex justify-center items-center  border h-full w-32'>
+                                                            <p className='bg-white absolute -top-2 left-2 text-sm'>Valor Total</p>
+                                                            <h2 className='text-lg'>
+                                                                {formatCurrencyBRL(Number(requestInfo?.valor_total))}
+                                                            </h2>
+                                                        </div>
+                                                    </div>
+                                                    <div className='flex relative h-10 tex-sm font-semibold '>
+                                                        <div className='flex justify-center items-center  border h-full w-32'>
+                                                            <p className='bg-white absolute -top-2 left-2 text-sm'>Quantidade</p>
+                                                            <h2 className='text-lg'>
+                                                                {requestInfo?.quantidade_total}
+                                                            </h2>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <Button
+                                                        onClick={()=> setModalCancel(true)}
+                                                        className='bg-red-500 '>
+                                                            Cancelar Pedido
+                                                        </Button>
+                                                    </div>
+    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ScrollArea>
+                            <div className="bg-gray-50 px-4 py-3 sm:px-6 flex gap-2">
+                                <Button
+                                    onClick={() => setModalOpen(false)}
+                                    variant={"secondary"}
+                                    className='border border-gray-400'
+                                >
+                                    Fechar
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {modalCancel && (
+                <div className="fixed z-50 inset-0 overflow-y-auto">
+                    <div className="flex items-center justify-center sm:items-start sm:justify-center min-h-screen px-4 pt-6 pb-20 text-center sm:block sm:p-0">
+                        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+                            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+                        </div>
+                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                        <form onSubmit={submitUpdate} className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle max-w-lg w-full">
+                            <ScrollArea>
+                                <div className="bg-white px-4 pt-5 pb-4 ">
+                                    <div className="">
+                                        <div className='flex items-center gap-2'>
+                                            <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-zinc-100 mx-0 sm:h-10 sm:w-10">
+                                                <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
+                                            </div>
+                                            <h3 className="text-lg leading-6 font-medium" id="modal-title">
+                                                Excluir pedido
                                             </h3>
                                         </div>
                                         <div className="mt-3sm:mt-0">
                                             <div className="mt-5">
                                                 <div >
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <Label htmlFor='nome'>Nome</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="nome"
-                                                                name="nome"
-                                                                value={dataUpdate.nome}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite o nome'
-                                                                required
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div className='w-full'>
-                                                            <Label htmlFor='descricao'>Descrição</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="descricao"
-                                                                name="descricao"
-                                                                value={dataUpdate.descricao}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite a descrição'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='preco'>Valor</Label>
-                                                            <Input
-                                                                type="number"
-                                                                id="preco"
-                                                                name="preco"
-                                                                value={dataUpdate.preco}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite o valor'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='estoque'>Estoque</Label>
-                                                            <Input
-                                                                type="text"
-                                                                id="estoque"
-                                                                name="estoque"
-                                                                value={dataUpdate.estoque}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite o estoque'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <Label htmlFor='data_validade'>Validade</Label>
-                                                            <Input
-                                                                type="date"
-                                                                id="data_validade"
-                                                                name="data_validade"
-                                                                value={dataUpdate.data_validade}
-                                                                onChange={handleChange}
-                                                                placeholder='Digite a validade'
-                                                                style={{ fontSize: '16px' }}
-                                                            />
-                                                        </div>
-                                                    </div>
+                                                    <h1>Tem certeza que deseja excuir esse pedido?</h1>
                                                 </div>
                                             </div>
                                         </div>
@@ -413,15 +426,15 @@ export default function Produtos() {
                             <div className="bg-gray-50 px-4 py-3 sm:px-6 flex gap-2">
                                 <Button
                                     style={{
-                                        backgroundColor: process.env.NEXT_PUBLIC_COR_SECUNDARIA
+                                        backgroundColor: 'red'
                                     }}
                                     type='submit'
                                 >
                                     {loading ? <span className="loading loading-spinner loading-xs"></span>
-                                        : 'Salvar'}
+                                        : 'Confirma'}
                                 </Button>
                                 <Button
-                                    onClick={() => setModalOpen(false)}
+                                    onClick={() => setModalCancel(false)}
                                     variant={"secondary"}
                                     className='border border-gray-400'
                                 >
@@ -431,7 +444,7 @@ export default function Produtos() {
                         </form>
                     </div>
                 </div>
-            )} */}
+            )}
             {modalDelete && (
                 <div className="fixed z-50 inset-0 overflow-y-auto">
                     <div className="flex items-center justify-center sm:items-start sm:justify-center min-h-screen px-4 pt-6 pb-20 text-center sm:block sm:p-0">
@@ -448,13 +461,13 @@ export default function Produtos() {
                                                 <Users style={{ color: process.env.NEXT_PUBLIC_COR_SECUNDARIA }} aria-hidden="true" />
                                             </div>
                                             <h3 className="text-lg leading-6 font-medium" id="modal-title">
-                                                Excluir pedido
+                                                Cancelar pedido
                                             </h3>
                                         </div>
                                         <div className="mt-3sm:mt-0">
                                             <div className="mt-5">
                                                 <div >
-                                                    <h1>Tem certeza que deseja excuir esse pedido?</h1>
+                                                    <h1>Tem certeza que deseja cancelar esse pedido?</h1>
                                                 </div>
                                             </div>
                                         </div>

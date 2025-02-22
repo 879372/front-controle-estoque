@@ -113,7 +113,8 @@ export default function Header({ titulo, isOpen, toggleSidebar }: HeaderProps) {
         className={`flex-1 transition-margin duration-300 ease-in-out bg-white flex justify-between h-20 items-center border-b-2 fixed px-6 z-40`}
         style={{ width: isOpen ? (isSmallScreen ? '100%' : 'calc(100% - 256px)') : '100%' }}
       >
-        <h1 className="text-4xl font-extrabold text-[#0a4273]">{titulo}</h1>
+        <h1 className="text-4xl font-extrabold"
+        style={{color: process.env.NEXT_PUBLIC_COR_SECUNDARIA}}>{titulo}</h1>
         <nav className="relative flex items-center">
           {!isSmallScreen && (<ul
             className={`flex items-center text-black gap-3 ${menuOpen ? 'hidden' : 'hideen'

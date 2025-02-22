@@ -56,7 +56,7 @@ export default function Home() {
       <Image
         src="/fundo.png"
         alt="fundo"
-        style={{ objectFit: 'fill' }}
+        // style={{ objectFit: 'fill' }}
         className="absolute inset-0 -z-50"
         fill
         priority={true}
@@ -64,8 +64,8 @@ export default function Home() {
       <Card className="flex flex-col justify-center items-center sm:min-w-[390px] min-w-[350px] max-w-[480px] pt-5">
         <CardHeader>
           <CardTitle className="flex flex-col justify-center items-center">
-            <Image src="/logo.png" width={200} height={200} alt="logo" className="rounded-sm mb-5" />
-            <p className="text-center text-zinc-800 text-xl font-medium">Bem-vindo(a) a Fish Find</p>
+            <Image src="/logo.png" width={100} height={100} alt="logo" className="rounded-sm mb-5" />
+            <p className="text-center text-zinc-800 text-xl font-medium">Bem-vindo(a) ao seu controle de estoque</p>
           </CardTitle>
         </CardHeader>
         <CardContent className="w-full">

@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           <>
             <ScrollArea className="flex h-screen overflow-y-auto ">
               <div className="text-center py-5 flex justify-center h-20  items-center gap-2 border-b border-b-neutral-400 mb-2">
-                <Link href={'/processos'}><Image src="/logo.png" width={150} height={150} alt="Rewind-UI" className="rounded-sm" priority /></Link>
+                <Link href={'/processos'}><Image src="/logo.png" width={50} height={50} alt="Rewind-UI" className="rounded-sm" priority /></Link>
                 <XIcon onClick={toggleSidebar} className=" sm:hidden absolute top-8 right-8 text-white" />
               </div>
               <div className="flex flex-col gap-1 ">
@@ -67,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                   <Accordion type="single" collapsible defaultValue="item-1" className="rounded-xl py-3">
                     <AccordionItem value="item-1" className="border-none">
                       <AccordionTrigger className={`flex items-center ml-8 mr-3 text-lg max-h-1 list-none`}>
-                        Admin
+                        Menu
                       </AccordionTrigger>
                       <AccordionContent>
                       <Link href="/pedidos" className={`flex  items-center px-8 h-10 w-full py-5 pt-7`}

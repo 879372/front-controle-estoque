@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Fish Find",
-  description: "Fish Find Inteligencia de Pesca",
+  title: "Estoque",
+  description: "Controle de estoque",
 };
 
 export default function RootLayout({

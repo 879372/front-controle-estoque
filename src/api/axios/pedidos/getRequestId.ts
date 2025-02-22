@@ -7,6 +7,15 @@ export interface GetRequestIdResponse {
     status: string;
     quantidade_total: number;
     valor_total: string;
+    itensPedido: {
+        id_item_pedido: number;
+        preco_unitario: string;
+        quantidade: string;
+        produto: {
+            descricao: string;
+            id_produto: string;
+        }
+    }[]
     cliente: {
         id_cliente: number;
         nome: string;
